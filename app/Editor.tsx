@@ -3,12 +3,13 @@ import * as React from 'react';
 import { useEditor, EditorContent, useEditorState, } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 
-export default function Editor({ submit }: { submit: (content: unknown) => Promise<void> }) {
-  const [content, setContent] = React.useState('<p>Hello World! 🌎️</p>');
+export default function Editor() {
+  const [markdown, setMarkdown] = React.useState('');
+  const [html, setHtml] = React.useState('');
 
   const editor = useEditor({
     extensions: [StarterKit],
-    content,
+    content: {"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","marks":[{"type":"bold"}],"text":"Bold"},{"type":"text","marks":[{"type":"underline"}],"text":" underline"},{"type":"text","text":" "},{"type":"text","marks":[{"type":"bold"},{"type":"underline"}],"text":"bold+underline"}]}]},
     immediatelyRender: false,
   })
 
@@ -21,26 +22,24 @@ export default function Editor({ submit }: { submit: (content: unknown) => Promi
     },
   })
 
-  const onSubmitOg = () => {
-    const newContent = editorState?.currentContent;
-    submit(newContent);
-  }
-
-  const onSubmitStringify = () => {
-    const newContent = editorState?.currentContent
-    submit(JSON.parse(JSON.stringify(newContent)))
-  }
 
   const onPost = async () => {
+    const currentContent = editorState?.currentContent
+
+    if (!currentContent) {
+      alert('No content to post, type something!')
+    };
+
     const response = await fetch('/api/validate', {
       method: 'POST',
-      body: JSON.stringify(editorState?.currentContent),
+      body: JSON.stringify(currentContent),
       headers: {
         'Content-Type': 'application/json',
       },
     })
     const data = await response.json()
-    console.log('data is', data)
+    setMarkdown(data.markdown)
+    setHtml(data.html)
   }
 
   return <div style={{ display: 'flex', flexDirection: 'column', gap: '16px'}}>
@@ -48,9 +47,15 @@ export default function Editor({ submit }: { submit: (content: unknown) => Promi
       <EditorContent editor={editor} />
     </div>
 
-    <div>Add a code block with content in the editor using ```. Submit it and look at your server console to see the error.</div>
-    <button onClick={onSubmitOg} style={{ backgroundColor: 'red', color: 'white', padding: '8px 16px', borderRadius: '4px' }}>Submit Server Action unmodified</button>
-    <button onClick={onSubmitStringify} style={{ backgroundColor: 'blue', color: 'white', padding: '8px 16px', borderRadius: '4px' }}>Submit Server Action with JSON.stringify</button>
+    <div>Add a code block with content in the editor using ```. Submit it see the output below. Underline has {'<u>'} but bold is parsed correctly.</div>
     <button onClick={onPost} style={{ backgroundColor: 'green', color: 'white', padding: '8px 16px', borderRadius: '4px' }}>Post to API</button>
+    <div>
+      <h3>Markdown</h3>
+      <code>{markdown}</code>
+    </div>
+    <div>
+      <h3>HTML</h3> 
+      <code>{html}</code>
+    </div>
   </div>
 }
